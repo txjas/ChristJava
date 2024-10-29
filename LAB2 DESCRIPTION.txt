@@ -1,0 +1,5 @@
+trader:
+The program calculates maximum profit from buying and selling stocks at a given price. The program calculates the profit for all possible pairs for 2 transactions only, summing the profit to determine the maximum profit. It then prints the maximum profit earned by a trader in a day for 2 transactions
+
+frequencty:
+The program first reads the size of the array and its elements, then counts the frequency of each number.The program determines the top K frequent numbers and displays them in descending order..
