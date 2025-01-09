@@ -1,0 +1,334 @@
+package RealEstate;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.sql.*;
+
+public class re {
+
+    // Database Connection Details
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/RealEstate";
+    private static final String DB_USER = "root";
+    private static final String DB_PASSWORD = "Lilkid$l0ver";
+
+    private JFrame frame;
+    private JTabbedPane tabbedPane;
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new re().createAndShowGUI());
+    }
+
+    // Create the main GUI with tabs
+    private void createAndShowGUI() {
+        frame = new JFrame("Real Estate Management");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(1000, 600); // Increased width for better layout
+
+        tabbedPane = new JTabbedPane();
+
+        // Add combined panel for Add Property and Agent Properties
+        tabbedPane.addTab("Add & Agent Properties", createCombinedPropertyPanel());
+
+        // Add other tabs for properties (View, Add), Transactions, and Delete Property
+        tabbedPane.addTab("View Properties", createViewPropertiesPanel());
+        tabbedPane.addTab("Transactions", createTransactionsPanel());
+        tabbedPane.addTab("Delete Property", createDeletePropertyPanel());
+
+        // Add the tabbed pane to the frame
+        frame.add(tabbedPane);
+        frame.setVisible(true);
+    }
+
+    // Panel to Combine Add Property and Agent's Properties
+    private JPanel createCombinedPropertyPanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 2, 10, 10)); // 1 row, 2 columns layout
+
+        // Left side: Add Property Panel
+        JPanel addPropertyPanel = createAddPropertyPanel();
+        panel.add(addPropertyPanel);
+
+        // Right side: Agent Properties Panel
+        JPanel agentPropertiesPanel = createAgentPropertiesPanel();
+        panel.add(agentPropertiesPanel);
+
+        return panel;
+    }
+
+    // Panel to View Properties
+    private JPanel createViewPropertiesPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        JLabel titleLabel = new JLabel("Available Properties");
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        JTable table = new JTable();
+        DefaultTableModel tableModel = new DefaultTableModel(
+                new String[]{"Property ID", "Address", "Price", "Size", "Rooms", "Status"}, 0
+        );
+        table.setModel(tableModel);
+
+        JButton loadButton = new JButton("Load Properties");
+        loadButton.addActionListener(e -> loadProperties(tableModel));
+
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(loadButton, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    // Panel to Add a New Property
+    private JPanel createAddPropertyPanel() {
+        JPanel panel = new JPanel(new GridLayout(8, 2, 10, 10)); // Increased to 8 rows for Size and Number of Rooms
+
+        JLabel idLabel = new JLabel("Property ID:");
+        JTextField idField = new JTextField();
+        JLabel addressLabel = new JLabel("Address:");
+        JTextField addressField = new JTextField();
+        JLabel priceLabel = new JLabel("Price:");
+        JTextField priceField = new JTextField();
+        JLabel sizeLabel = new JLabel("Size (in sq ft):");
+        JTextField sizeField = new JTextField();
+        JLabel roomsLabel = new JLabel("Number of Rooms:");
+        JTextField roomsField = new JTextField();
+        JLabel statusLabel = new JLabel("Status:");
+        JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"Available", "Not Available"});
+        JLabel typeLabel = new JLabel("Type:");
+        JComboBox<String> typeComboBox = new JComboBox<>(new String[]{"Residential", "Commercial", "Industrial"});
+
+        JButton addButton = new JButton("Add Property");
+        addButton.addActionListener(e -> addProperty(
+                idField.getText(),
+                addressField.getText(),
+                priceField.getText(),
+                sizeField.getText(),
+                roomsField.getText(),
+                (String) statusComboBox.getSelectedItem(),
+                (String) typeComboBox.getSelectedItem()
+        ));
+
+        panel.add(idLabel);
+        panel.add(idField);
+        panel.add(addressLabel);
+        panel.add(addressField);
+        panel.add(priceLabel);
+        panel.add(priceField);
+        panel.add(sizeLabel);
+        panel.add(sizeField);
+        panel.add(roomsLabel);
+        panel.add(roomsField);
+        panel.add(statusLabel);
+        panel.add(statusComboBox);
+        panel.add(typeLabel);
+        panel.add(typeComboBox);
+        panel.add(new JLabel());
+        panel.add(addButton);
+
+        return panel;
+    }
+
+    // Panel to View Transactions
+    private JPanel createTransactionsPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        JLabel titleLabel = new JLabel("Transaction History");
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        JTable table = new JTable();
+        DefaultTableModel tableModel = new DefaultTableModel(
+                new String[]{"Transaction ID", "Property ID", "Client ID", "Agent ID", "Date", "Price", "Status"}, 0
+        );
+        table.setModel(tableModel);
+
+        JButton loadButton = new JButton("Load Transactions");
+        loadButton.addActionListener(e -> loadTransactions(tableModel));
+
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(loadButton, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    private void loadTransactions(DefaultTableModel tableModel) {
+        // Assuming the transaction table has columns: TransactionID, PropertyID, BuyerID, SellerID, Price, Date
+        String query = "SELECT * FROM Transactions";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(query)) {
+
+            tableModel.setRowCount(0); // Clear existing rows
+
+            while (resultSet.next()) {
+                tableModel.addRow(new Object[]{
+                        resultSet.getInt("TransactionID"),
+                        resultSet.getInt("PropertyID"),
+                        resultSet.getInt("ClientID"),
+                        resultSet.getInt("AgentID"),
+                        resultSet.getDate("Date"),
+                        resultSet.getDouble("Price"),
+                        resultSet.getString("Status")
+                });
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Error loading transactions: " + e.getMessage());
+        }
+    }
+
+    // Panel to Delete Property
+    private JPanel createDeletePropertyPanel() {
+        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
+
+        JLabel idLabel = new JLabel("Property ID:");
+        JTextField idField = new JTextField();
+
+        JButton deleteButton = new JButton("Delete Property");
+        deleteButton.addActionListener(e -> deleteProperty(idField.getText()));
+
+        panel.add(idLabel);
+        panel.add(idField);
+        panel.add(new JLabel());
+        panel.add(deleteButton);
+
+        return panel;
+    }
+
+    // Panel to View Agent's Properties
+    private JPanel createAgentPropertiesPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        JLabel titleLabel = new JLabel("Agent's Properties");
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        JTable table = new JTable();
+        DefaultTableModel tableModel = new DefaultTableModel(
+                new String[]{"Property ID", "Address", "Price", "Status"}, 0
+        );
+        table.setModel(tableModel);
+
+        JTextField agentIdField = new JTextField();
+        JButton searchButton = new JButton("Search by Agent ID");
+        searchButton.addActionListener(e -> {
+            int agentId = Integer.parseInt(agentIdField.getText());
+            loadAgentProperties(agentId, tableModel);
+        });
+
+        JPanel searchPanel = new JPanel(new FlowLayout());
+        searchPanel.add(new JLabel("Agent ID:"));
+        searchPanel.add(agentIdField);
+        searchPanel.add(searchButton);
+
+        panel.add(searchPanel, BorderLayout.NORTH);
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    // Load Properties from the database
+    private void loadProperties(DefaultTableModel tableModel) {
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT * FROM Properties WHERE Status='Available'")) {
+
+            tableModel.setRowCount(0);
+
+            while (resultSet.next()) {
+                tableModel.addRow(new Object[]{
+                        resultSet.getInt("PropertyID"),
+                        resultSet.getString("Address"),
+                        resultSet.getDouble("Price"),
+                        resultSet.getInt("Size"),
+                        resultSet.getInt("NumberOfRooms"),
+                        resultSet.getString("Status")
+                });
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Error loading properties: " + e.getMessage());
+        }
+    }
+
+    // Add Property to Database
+    private void addProperty(String id, String address, String price, String size, String rooms, String status, String type) {
+        String insertPropertyQuery = "INSERT INTO Properties (PropertyID, Address, Price, Size, NumberOfRooms, Status, Type) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(insertPropertyQuery)) {
+
+            preparedStatement.setInt(1, Integer.parseInt(id));
+            preparedStatement.setString(2, address);
+            preparedStatement.setDouble(3, Double.parseDouble(price));
+            preparedStatement.setInt(4, Integer.parseInt(size));
+            preparedStatement.setInt(5, Integer.parseInt(rooms));
+            preparedStatement.setString(6, status);
+            preparedStatement.setString(7, type);
+
+            preparedStatement.executeUpdate();
+            JOptionPane.showMessageDialog(null, "Property added successfully!");
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Error adding property: " + e.getMessage());
+        }
+    }
+
+    // Delete Property by ID
+    private void deleteProperty(String propertyId) {
+        String deleteQuery = "DELETE FROM Properties WHERE PropertyID = ?";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery)) {
+
+            preparedStatement.setInt(1, Integer.parseInt(propertyId));
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            if (rowsAffected > 0) {
+                JOptionPane.showMessageDialog(null, "Property deleted successfully!");
+            } else {
+                JOptionPane.showMessageDialog(null, "Property ID not found!");
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Error deleting property: " + e.getMessage());
+        }
+    }
+
+    // Load Properties by Agent ID
+    private void loadAgentProperties(int agentId, DefaultTableModel tableModel) {
+        String query = "SELECT Properties.PropertyID, Properties.Address, Properties.Price, Properties.Status " +
+                       "FROM Properties " +
+                       "JOIN Listings ON Properties.PropertyID = Listings.PropertyID " +
+                       "WHERE Listings.AgentID = ?";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setInt(1, agentId);
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            tableModel.setRowCount(0);
+
+            while (resultSet.next()) {
+                tableModel.addRow(new Object[]{
+                        resultSet.getInt("PropertyID"),
+                        resultSet.getString("Address"),
+                        resultSet.getDouble("Price"),
+                        resultSet.getString("Status")
+                });
+            }
+
+            if (tableModel.getRowCount() == 0) {
+                JOptionPane.showMessageDialog(frame, "No properties found for this agent.");
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(frame, "Error loading agent properties: " + e.getMessage());
+        }
+    }
+}
